@@ -2,14 +2,18 @@ import { Trophy, Split, Check, Ban, Store, TrendingDown } from "lucide-react"
 import type { ComparisonReport, ItemComparison } from "@/lib/aggregate"
 import { PLATFORMS } from "@/lib/scrapers/platforms"
 import type { Platform } from "@/lib/scrapers/types"
-import { formatINR, formatUnit, PLATFORM_STYLES } from "@/lib/format"
+import { formatINR, formatUnit } from "@/lib/format"
 import { PlatformBadge, PlatformDot } from "@/components/platform-badge"
+import { InsightsPanel } from "@/components/insights-panel"
+import { PriceTrendChart } from "@/components/price-trend-chart"
 import { cn } from "@/lib/utils"
 
 export function ResultsView({ report }: { report: ComparisonReport }) {
   return (
     <div className="flex flex-col gap-6">
       <RecommendationCards report={report} />
+      <InsightsPanel insights={report.insights} />
+      <PriceTrendChart trend={report.trend} />
       <PlatformTotals report={report} />
       <ItemBreakdown items={report.items} />
       <p className="text-pretty text-center text-xs text-muted-foreground">

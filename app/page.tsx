@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ShoppingBasket, Zap, AlertCircle } from "lucide-react"
+import { ShoppingBasket, Zap, AlertCircle, Sparkles, Ruler, Truck, GitCompareArrows } from "lucide-react"
 import { CompareForm, type DraftItem } from "@/components/compare-form"
 import { ResultsView } from "@/components/results-view"
 import { PlatformDot } from "@/components/platform-badge"
@@ -34,19 +34,28 @@ export default function Page() {
 
   return (
     <main className="min-h-dvh">
-      <header className="border-b border-border bg-card/60">
-        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 sm:px-6 sm:py-10">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
+      <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
               <ShoppingBasket className="size-5" />
             </span>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">QuickBasket</h1>
-              <p className="text-sm text-muted-foreground">Quick-commerce grocery price comparison</p>
-            </div>
+            <span className="text-lg font-bold tracking-tight text-foreground">QuickBasket</span>
           </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary" />
+            Live-style demo data
+          </span>
+        </div>
+      </header>
+
+      <section className="border-b border-border bg-card/40">
+        <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-10 sm:px-6 sm:py-14">
+          <h1 className="max-w-2xl text-balance text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
+            One basket, three apps. See who&apos;s actually cheapest.
+          </h1>
           <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Build your shopping list and instantly compare the total across{" "}
+            Build a shopping list and instantly compare the delivered total across{" "}
             <span className="inline-flex items-center gap-1 font-medium text-foreground">
               <PlatformDot platform="blinkit" /> Blinkit
             </span>
@@ -58,10 +67,15 @@ export default function Page() {
             <span className="inline-flex items-center gap-1 font-medium text-foreground">
               <PlatformDot platform="instamart" /> Swiggy Instamart
             </span>
-            . Per-unit pricing and delivery fees included.
+            .
           </p>
+          <div className="flex flex-wrap gap-2">
+            <FeatureChip icon={<Ruler className="size-3.5" />} label="Per-unit normalization" />
+            <FeatureChip icon={<Truck className="size-3.5" />} label="Delivery & handling fees" />
+            <FeatureChip icon={<GitCompareArrows className="size-3.5" />} label="Smart cart splitting" />
+          </div>
         </div>
-      </header>
+      </section>
 
       <div className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[380px_1fr]">
         <div className="lg:sticky lg:top-6 lg:self-start">
@@ -82,7 +96,26 @@ export default function Page() {
           {report ? <ResultsView report={report} /> : <EmptyState loading={loading} />}
         </div>
       </div>
+
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-8 text-center text-xs text-muted-foreground sm:px-6">
+          <p className="text-pretty">
+            Built with a swappable scraper interface — the mock catalog can be replaced with real
+            Blinkit / Zepto / Instamart scrapers without touching the matching, aggregation or UI layers.
+          </p>
+          <p>Educational demo · Prices are illustrative sample data, not live quotes.</p>
+        </div>
+      </footer>
     </main>
+  )
+}
+
+function FeatureChip({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground">
+      <span className="text-primary">{icon}</span>
+      {label}
+    </span>
   )
 }
 
