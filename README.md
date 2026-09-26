@@ -4,6 +4,7 @@
 
 ### Real-Time 5-Platform Quick-Commerce & Supermarket Price Optimizer
 
+[![Live Demo](https://img.shields.io/badge/Demo-Live_Preview-success?style=for-the-badge&logo=vercel)](https://quickbasket-sakshishirke412-2825s-projects.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-16.2.6_Turbopack-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.3-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
@@ -13,6 +14,8 @@
 
 <p align="center">
   <b>Compare delivered totals, normalize per-unit prices, and find the mathematical minimum multi-store cart across India's top grocery platforms.</b>
+  <br />
+  <a href="https://quickbasket-sakshishirke412-2825s-projects.vercel.app"><b>🚀 Try the Live Application &rarr;</b></a>
 </p>
 
 [Key Features](#-key-features) •
