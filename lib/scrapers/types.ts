@@ -2,7 +2,7 @@
 // Real Playwright/HTTP scrapers just need to return `ProductResult[]`
 // from `searchProducts()` and everything downstream keeps working.
 
-export type Platform = "blinkit" | "zepto" | "instamart"
+export type Platform = "blinkit" | "zepto" | "instamart" | "flipkart" | "dmart"
 
 export type Unit = "g" | "kg" | "ml" | "l" | "pc"
 
@@ -22,11 +22,17 @@ export interface ProductResult {
   /** delivery ETA in minutes */
   etaMinutes: number
   imageUrl?: string
+  /** Direct link to the specific product on the platform's site */
+  productUrl?: string
 }
 
 export interface PlatformMeta {
   id: Platform
   label: string
+  /** delivery speed categorization */
+  speedCategory: "instant" | "scheduled"
+  /** human-friendly ETA text, e.g. "10 mins" or "Tomorrow" */
+  etaLabel: string
   /** flat delivery fee in INR */
   deliveryFee: number
   /** order subtotal above which delivery is free */

@@ -18,6 +18,8 @@ class Platform(str, Enum):
     blinkit = "blinkit"
     zepto = "zepto"
     instamart = "instamart"
+    flipkart = "flipkart"
+    dmart = "dmart"
 
 
 class Unit(str, Enum):
@@ -42,6 +44,7 @@ class ProductResult(BaseModel):
     inStock: bool = True
     etaMinutes: int = Field(ge=0, description="delivery ETA in minutes")
     imageUrl: Optional[str] = None
+    productUrl: Optional[str] = None
 
 
 class SearchRequest(BaseModel):

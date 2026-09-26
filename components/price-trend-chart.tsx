@@ -16,6 +16,8 @@ const chartConfig = {
   blinkit: { label: "Blinkit", color: "var(--blinkit)" },
   zepto: { label: "Zepto", color: "var(--zepto)" },
   instamart: { label: "Instamart", color: "var(--instamart)" },
+  flipkart: { label: "Flipkart Minutes", color: "var(--flipkart)" },
+  dmart: { label: "DMart Ready", color: "var(--dmart)" },
 } satisfies ChartConfig
 
 export function PriceTrendChart({ trend }: { trend: TrendPoint[] }) {
@@ -73,6 +75,23 @@ export function PriceTrendChart({ trend }: { trend: TrendPoint[] }) {
               type="monotone"
               stroke="var(--color-instamart)"
               strokeWidth={2}
+              dot={false}
+              connectNulls
+            />
+            <Line
+              dataKey="flipkart"
+              type="monotone"
+              stroke="var(--color-flipkart)"
+              strokeWidth={2}
+              dot={false}
+              connectNulls
+            />
+            <Line
+              dataKey="dmart"
+              type="monotone"
+              stroke="var(--color-dmart)"
+              strokeWidth={2.5}
+              strokeDasharray="4 3"
               dot={false}
               connectNulls
             />

@@ -13,6 +13,10 @@
   --color-zepto-foreground: var(--zepto-foreground);
   --color-instamart: var(--instamart);
   --color-instamart-foreground: var(--instamart-foreground);
+  --color-flipkart: var(--flipkart);
+  --color-flipkart-foreground: var(--flipkart-foreground);
+  --color-dmart: var(--dmart);
+  --color-dmart-foreground: var(--dmart-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -83,6 +87,10 @@
   --zepto-foreground: oklch(0.99 0.01 295);
   --instamart: oklch(0.68 0.19 45);
   --instamart-foreground: oklch(0.99 0.01 45);
+  --flipkart: oklch(0.55 0.22 250);
+  --flipkart-foreground: oklch(0.99 0.01 250);
+  --dmart: oklch(0.52 0.17 150);
+  --dmart-foreground: oklch(0.99 0.01 150);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -127,6 +135,10 @@
   --zepto-foreground: oklch(0.99 0.01 295);
   --instamart: oklch(0.7 0.19 45);
   --instamart-foreground: oklch(0.18 0.03 45);
+  --flipkart: oklch(0.65 0.2 250);
+  --flipkart-foreground: oklch(0.99 0.01 250);
+  --dmart: oklch(0.62 0.18 150);
+  --dmart-foreground: oklch(0.99 0.01 150);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -171,6 +183,10 @@
     --zepto-foreground: oklch(0.99 0.01 295);
     --instamart: oklch(0.7 0.19 45);
     --instamart-foreground: oklch(0.18 0.03 45);
+    --flipkart: oklch(0.65 0.2 250);
+    --flipkart-foreground: oklch(0.99 0.01 250);
+    --dmart: oklch(0.62 0.18 150);
+    --dmart-foreground: oklch(0.99 0.01 150);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);

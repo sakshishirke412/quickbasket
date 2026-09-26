@@ -36,4 +36,14 @@ export const PLATFORM_STYLES: Record<
     chip: "bg-instamart text-instamart-foreground",
     ring: "ring-instamart/40",
   },
+  flipkart: {
+    dot: "bg-flipkart",
+    chip: "bg-flipkart text-flipkart-foreground",
+    ring: "ring-flipkart/40",
+  },
+  dmart: {
+    dot: "bg-dmart",
+    chip: "bg-dmart text-dmart-foreground",
+    ring: "ring-dmart/40",
+  },
 }

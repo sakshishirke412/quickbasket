@@ -9,7 +9,7 @@ const MAX_ITEMS = 25
 
 interface CompareBody {
   pincode?: string
-  items?: { query?: string; quantity?: number }[]
+  items?: { query?: string; quantity?: number; brand?: string; packSize?: string }[]
 }
 
 function sanitizeItems(items: CompareBody["items"]): BasketItem[] {
@@ -19,12 +19,14 @@ function sanitizeItems(items: CompareBody["items"]): BasketItem[] {
   for (const raw of items) {
     const query = String(raw?.query ?? "").trim()
     if (!query) continue
-    const key = query.toLowerCase()
+    const brand = raw?.brand ? String(raw.brand).trim() : undefined
+    const packSize = raw?.packSize ? String(raw.packSize).trim() : undefined
+    const key = `${query.toLowerCase()}_${(brand || "").toLowerCase()}_${(packSize || "").toLowerCase()}`
     if (seen.has(key)) continue
     seen.add(key)
     const qty = Number(raw?.quantity)
     const quantity = Number.isFinite(qty) ? Math.min(Math.max(Math.trunc(qty), 1), 20) : 1
-    out.push({ query, quantity })
+    out.push({ query, quantity, brand, packSize })
     if (out.length >= MAX_ITEMS) break
   }
   return out
@@ -50,13 +52,17 @@ export async function POST(request: Request) {
 
   // For each item, fan out to every platform and keep the best match per platform.
   const rawByItem = await Promise.all(
-    items.map(async ({ query, quantity }) => {
-      const all: ProductResult[] = await searchAllPlatforms(query, pincode)
+    items.map(async ({ query, quantity, brand, packSize }) => {
+      // Build a targeted search term including brand and pack size for maximum accuracy
+      const searchTerms = [brand && brand !== "Any" ? brand : "", query, packSize || ""]
+        .filter(Boolean)
+        .join(" ")
+      const all: ProductResult[] = await searchAllPlatforms(searchTerms || query, pincode)
 
       const candidates = {} as Record<Platform, NormalizedProduct[]>
       for (const platform of PLATFORM_IDS) {
         const forPlatform = all.filter((p) => p.platform === platform)
-        const best = pickBestMatch(query, forPlatform)
+        const best = pickBestMatch(query, forPlatform, { brand, packSize })
         candidates[platform] = best ? [best] : []
       }
 

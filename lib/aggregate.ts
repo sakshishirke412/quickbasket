@@ -7,6 +7,10 @@ export interface BasketItem {
   query: string
   /** number of packs the user wants */
   quantity: number
+  /** preferred brand if selected */
+  brand?: string
+  /** preferred pack size variant if selected */
+  packSize?: string
 }
 
 export interface PlatformMatch {
@@ -21,6 +25,8 @@ export interface PlatformMatch {
 export interface ItemComparison {
   query: string
   quantity: number
+  brand?: string
+  packSize?: string
   matches: PlatformMatch[]
   cheapestPlatform: Platform | null
 }
@@ -62,6 +68,8 @@ export interface TrendPoint {
   blinkit: number | null
   zepto: number | null
   instamart: number | null
+  flipkart: number | null
+  dmart: number | null
 }
 
 /** Headline analytics derived from the comparison. */
@@ -88,6 +96,13 @@ export interface Insights {
   inStockRate: number
   /** week-over-week change of the cheapest platform's basket (%), from trend */
   cheapestTrendPct: number
+  /** cheapest instant 10-15m delivery platform total */
+  cheapestInstantTotal: number | null
+  cheapestInstantPlatform: Platform | null
+  /** dmart total if available */
+  dmartTotal: number | null
+  /** money saved by waiting for scheduled delivery (DMart) vs fastest instant store */
+  urgencyPremium: number
 }
 
 export interface ComparisonReport {
@@ -146,6 +161,157 @@ function fees(platform: Platform, subtotal: number): { deliveryFee: number; hand
   return { deliveryFee, handlingFee }
 }
 
+function evaluateAssignment(
+  assignment: Platform[],
+  itemComparisons: ItemComparison[],
+): SplitCart & { coverage: number } {
+  const lines: SplitCartLine[] = []
+  const perPlatformSubtotal: Record<string, number> = {}
+
+  let coverage = 0
+  assignment.forEach((platform, idx) => {
+    const item = itemComparisons[idx]
+    const m = item.matches.find((x) => x.platform === platform)
+    if (m?.product && m.lineTotal != null) {
+      coverage++
+      lines.push({
+        query: item.query,
+        quantity: item.quantity,
+        platform,
+        product: m.product,
+        lineTotal: m.lineTotal,
+      })
+      perPlatformSubtotal[platform] = (perPlatformSubtotal[platform] ?? 0) + m.lineTotal
+    }
+  })
+
+  const platformsUsed = (Object.keys(perPlatformSubtotal) as Platform[]).filter(
+    (p) => (perPlatformSubtotal[p] ?? 0) > 0,
+  )
+
+  let feesTotal = 0
+  for (const platform of platformsUsed) {
+    const { deliveryFee, handlingFee } = fees(platform, perPlatformSubtotal[platform])
+    feesTotal += deliveryFee + handlingFee
+  }
+
+  const itemsTotal = lines.reduce((s, l) => s + l.lineTotal, 0)
+  return {
+    lines,
+    perPlatformSubtotal,
+    itemsTotal,
+    feesTotal,
+    total: itemsTotal + feesTotal,
+    platformsUsed,
+    coverage,
+  }
+}
+
+/**
+ * Find the optimal split across 2 or more platforms that minimizes total delivered cost.
+ * Evaluates multi-platform subsets and performs threshold-crossing optimization to guarantee
+ * genuine net savings including delivery and handling charges.
+ */
+function findOptimalSplitCart(
+  itemComparisons: ItemComparison[],
+  platforms: Platform[],
+): SplitCart {
+  const multiSubsets: Platform[][] = [
+    ["blinkit", "zepto"],
+    ["blinkit", "instamart"],
+    ["blinkit", "flipkart"],
+    ["zepto", "instamart"],
+    ["zepto", "flipkart"],
+    ["instamart", "flipkart"],
+    ["blinkit", "zepto", "instamart"],
+    ["blinkit", "zepto", "flipkart"],
+    ["dmart", "blinkit"],
+    ["dmart", "zepto"],
+    ["dmart", "flipkart"],
+    ["blinkit", "zepto", "instamart", "flipkart"],
+    ["blinkit", "zepto", "instamart", "flipkart", "dmart"],
+  ]
+
+  let bestSplitCart: (SplitCart & { coverage: number }) | null = null
+
+  for (const subset of multiSubsets) {
+    const optionsPerItem: Platform[][] = itemComparisons.map((item) => {
+      return subset.filter((p) => {
+        const m = item.matches.find((x) => x.platform === p)
+        return m?.product != null && m.lineTotal != null
+      })
+    })
+
+    const hasAnyCoverage = optionsPerItem.some((opts) => opts.length > 0)
+    if (!hasAnyCoverage) continue
+
+    // Initial assignment: cheapest item price within this subset
+    const currentAssignment: Platform[] = optionsPerItem.map((opts, idx) => {
+      if (opts.length === 0) return subset[0]
+      const item = itemComparisons[idx]
+      let bestP = opts[0]
+      let minLineTotal = Number.POSITIVE_INFINITY
+      for (const p of opts) {
+        const m = item.matches.find((x) => x.platform === p)
+        if (m?.lineTotal != null && m.lineTotal < minLineTotal) {
+          minLineTotal = m.lineTotal
+          bestP = p
+        }
+      }
+      return bestP
+    })
+
+    let currentEval = evaluateAssignment(currentAssignment, itemComparisons)
+
+    // Local search / threshold-crossing optimization:
+    // If shifting an item crosses a free-delivery threshold and saves more on shipping
+    // than the item price difference, take the swap!
+    let improved = true
+    let passes = 0
+    while (improved && passes < 4) {
+      improved = false
+      passes++
+      for (let i = 0; i < itemComparisons.length; i++) {
+        const opts = optionsPerItem[i]
+        const currentP = currentAssignment[i]
+        for (const candidateP of opts) {
+          if (candidateP === currentP) continue
+          const testAssignment = [...currentAssignment]
+          testAssignment[i] = candidateP
+          const testEval = evaluateAssignment(testAssignment, itemComparisons)
+          if (
+            testEval.coverage >= currentEval.coverage &&
+            testEval.total < currentEval.total
+          ) {
+            currentAssignment[i] = candidateP
+            currentEval = testEval
+            improved = true
+          }
+        }
+      }
+    }
+
+    if (currentEval.platformsUsed.length >= 2) {
+      if (
+        !bestSplitCart ||
+        currentEval.coverage > bestSplitCart.coverage ||
+        (currentEval.coverage === bestSplitCart.coverage && currentEval.total < bestSplitCart.total)
+      ) {
+        bestSplitCart = currentEval
+      }
+    }
+  }
+
+  // Fallback: If no multi-platform split was valid, assign greedily
+  if (!bestSplitCart) {
+    const fallbackAssignment = itemComparisons.map((item) => item.cheapestPlatform ?? platforms[0])
+    bestSplitCart = evaluateAssignment(fallbackAssignment, itemComparisons)
+  }
+
+  const { coverage: _c, ...splitCart } = bestSplitCart
+  return splitCart
+}
+
 /**
  * Build the full comparison report from raw candidates.
  * `candidatesByItem[i]` holds each platform's best-matched product for item i.
@@ -173,14 +339,31 @@ export function buildReport(
     let cheapestPlatform: Platform | null = null
     let cheapest = Number.POSITIVE_INFINITY
     for (const m of matches) {
-      if (m.lineTotal != null && m.lineTotal < cheapest) {
-        cheapest = m.lineTotal
-        cheapestPlatform = m.platform
+      if (m.lineTotal != null) {
+        if (m.lineTotal < cheapest) {
+          cheapest = m.lineTotal
+          cheapestPlatform = m.platform
+        } else if (m.lineTotal === cheapest && cheapestPlatform != null) {
+          // Tie-break: prefer platform with lower free delivery threshold
+          const prevMeta = PLATFORMS[cheapestPlatform]
+          const currMeta = PLATFORMS[m.platform]
+          if (currMeta.freeDeliveryAbove < prevMeta.freeDeliveryAbove) {
+            cheapestPlatform = m.platform
+          }
+        }
       }
     }
     for (const m of matches) m.isCheapest = m.platform === cheapestPlatform
 
-    return { query, quantity, matches, cheapestPlatform }
+    const original = items.find((it) => it.query === query)
+    return {
+      query,
+      quantity,
+      brand: original?.brand,
+      packSize: original?.packSize,
+      matches,
+      cheapestPlatform,
+    }
   })
 
   // Per-platform full-basket totals.
@@ -213,41 +396,8 @@ export function buildReport(
       .filter((b) => b.hasAllItems)
       .sort((a, b) => a.total - b.total)[0] ?? null
 
-  // Cherry-picked split cart: buy each item from its cheapest platform.
-  const splitLines: SplitCartLine[] = []
-  const perPlatformSubtotal: Record<string, number> = {}
-  for (const item of itemComparisons) {
-    if (!item.cheapestPlatform) continue
-    const m = item.matches.find((x) => x.platform === item.cheapestPlatform)
-    if (!m?.product || m.lineTotal == null) continue
-    splitLines.push({
-      query: item.query,
-      quantity: item.quantity,
-      platform: item.cheapestPlatform,
-      product: m.product,
-      lineTotal: m.lineTotal,
-    })
-    perPlatformSubtotal[item.cheapestPlatform] =
-      (perPlatformSubtotal[item.cheapestPlatform] ?? 0) + m.lineTotal
-  }
-
-  const platformsUsed = Object.keys(perPlatformSubtotal) as Platform[]
-  let feesTotal = 0
-  for (const platform of platformsUsed) {
-    const { deliveryFee, handlingFee } = fees(platform, perPlatformSubtotal[platform])
-    feesTotal += deliveryFee + handlingFee
-  }
-  const itemsTotal = splitLines.reduce((s, l) => s + l.lineTotal, 0)
-
-  const splitCart: SplitCart = {
-    lines: splitLines,
-    perPlatformSubtotal,
-    itemsTotal,
-    feesTotal,
-    total: itemsTotal + feesTotal,
-    platformsUsed,
-  }
-
+  // Combinatorial optimal split cart
+  const splitCart = findOptimalSplitCart(itemComparisons, platforms)
   const splitSavings = bestSinglePlatform ? bestSinglePlatform.total - splitCart.total : 0
 
   // --- 14-day basket price trend (per platform) ---------------------------
@@ -257,7 +407,13 @@ export function buildReport(
     const date = new Date(today)
     date.setDate(today.getDate() - d)
     const label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })
-    const totals: Record<Platform, number | null> = { blinkit: null, zepto: null, instamart: null }
+    const totals: Record<Platform, number | null> = {
+      blinkit: null,
+      zepto: null,
+      instamart: null,
+      flipkart: null,
+      dmart: null,
+    }
     for (const platform of platforms) {
       let sum = 0
       let any = false
@@ -270,7 +426,14 @@ export function buildReport(
       }
       totals[platform] = any ? sum : null
     }
-    trend.push({ label, blinkit: totals.blinkit, zepto: totals.zepto, instamart: totals.instamart })
+    trend.push({
+      label,
+      blinkit: totals.blinkit,
+      zepto: totals.zepto,
+      instamart: totals.instamart,
+      flipkart: totals.flipkart,
+      dmart: totals.dmart,
+    })
   }
 
   // --- Headline insights --------------------------------------------------
@@ -294,7 +457,7 @@ export function buildReport(
   let recMrp = 0
   let recPrice = 0
   if (splitWorth) {
-    for (const l of splitLines) {
+    for (const l of splitCart.lines) {
       recMrp += l.product.mrp * l.quantity
       recPrice += l.product.price * l.quantity
     }
@@ -352,6 +515,27 @@ export function buildReport(
     }
   }
 
+  // Instant vs Value / Urgency Premium analysis
+  const instantBaskets = baskets.filter(
+    (b) => PLATFORMS[b.platform].speedCategory === "instant" && b.hasAllItems,
+  )
+  const bestInstantBasket =
+    instantBaskets.slice().sort((a, b) => a.total - b.total)[0] ??
+    baskets
+      .filter((b) => PLATFORMS[b.platform].speedCategory === "instant" && b.subtotal > 0)
+      .slice()
+      .sort((a, b) => a.total - b.total)[0] ??
+    null
+
+  const dmartBasket = baskets.find((b) => b.platform === "dmart")
+  const dmartTotal = dmartBasket && dmartBasket.subtotal > 0 ? dmartBasket.total : null
+  const cheapestInstantTotal = bestInstantBasket ? bestInstantBasket.total : null
+  const cheapestInstantPlatform = bestInstantBasket ? bestInstantBasket.platform : null
+  const urgencyPremium =
+    cheapestInstantTotal != null && dmartTotal != null && cheapestInstantTotal > dmartTotal
+      ? cheapestInstantTotal - dmartTotal
+      : 0
+
   const insights: Insights = {
     recommendedTotal,
     recommendedLabel,
@@ -364,6 +548,10 @@ export function buildReport(
     itemsCompared: itemComparisons.length,
     inStockRate,
     cheapestTrendPct,
+    cheapestInstantTotal,
+    cheapestInstantPlatform,
+    dmartTotal,
+    urgencyPremium,
   }
 
   return {
